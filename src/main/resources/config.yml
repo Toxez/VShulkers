@@ -1,7 +1,7 @@
 # ====================================================
-# Настройки плагина VShulker
+# Настройки плагина VShulkers
 # Автор: Tox_8729
-# Версия: 1.2
+# Версия: 1.5
 # ====================================================
 
 # Настройки звука при подборе предмета в шалкер
@@ -74,12 +74,17 @@ settings:
 essentials-support:
   # Запретить открытие шалкера в режиме ваниша EssentialsX
   disable-shulker-open-in-vanish: true
-  # Запретить автоподбор предметов в шалкер в режиме vanish EssentialsX
+  # Запретить автоподбор предметов в шалкер в режиме ваниша EssentialsX
   disable-auto-pickup-in-vanish: true
   # Запретить открытие шалкера в режиме бога EssentialsX
   disable-shulker-open-in-god-mode: true
   # Запретить автоподбор предметов в шалкер в режиме бога EssentialsX
   disable-auto-pickup-in-god-mode: true
+
+# Настройка авто подбора
+# true - подбираются только предметы из списка
+# false - подбираются все предметы
+shulker-auto-all-items: true
 
 # Список предметов, которые будут автоматически добавляться в шалкер
 # Добавьте сюда материалы (названия предметов из Minecraft), которые должны попадать в шалкер.
@@ -92,6 +97,7 @@ essentials-support:
 # - TOTEM_OF_UNDYING (тотем бессмертия)
 # - NETHERITE_SWORD (незеритовый меч)
 # - ENCHANTED_GOLDEN_APPLE (зачарованное золотое яблоко)
+# РАБОТАЕТ ТОЛЬОК ЕСЛИ shulker-auto-all-items: true
 shulker-auto:
   # Блоки
   - OBSIDIAN

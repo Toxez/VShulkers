@@ -146,7 +146,7 @@ public class SHListeners implements Listener {
     }
 
     private boolean tryAddToShulker(Player p, ItemStack item) {
-        if (!ConfigUtil.allowedItems.contains(item.getType().toString())) {
+        if (ConfigUtil.shulkerAutoAllItems && !ConfigUtil.allowedItems.contains(item.getType().toString())) {
             return false;
         }
 

@@ -29,6 +29,7 @@ public class ConfigUtil {
     public static String limitShulkerDroppedMessage;
     public static int shulkerLimit;
     public static List<String> allowedItems;
+    public static boolean shulkerAutoAllItems;
 
     public static boolean disableShulkerOpenInVanish;
     public static boolean disableAutoPickupInVanish;
@@ -106,6 +107,7 @@ public class ConfigUtil {
 
         shulkerLimit = config.getInt("settings.limit-shulker-boxes", 3);
         allowedItems = config.getStringList("shulker-auto");
+        shulkerAutoAllItems = config.getBoolean("shulker-auto-all-items", true);
 
         disableShulkerOpenInVanish = config.getBoolean("essentials-support.disable-shulker-open-in-vanish", true);
         disableAutoPickupInVanish = config.getBoolean("essentials-support.disable-auto-pickup-in-vanish", true);
