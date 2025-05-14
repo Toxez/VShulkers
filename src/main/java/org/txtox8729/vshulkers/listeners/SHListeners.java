@@ -70,6 +70,9 @@ public class SHListeners implements Listener {
             e.setCancelled(true);
             return;
         }
+        if (isShulkerOpen(p)) {
+            return;
+        }
 
         if (p.getInventory().firstEmpty() != -1) return;
         if (isShulkerBox(item)) return;
