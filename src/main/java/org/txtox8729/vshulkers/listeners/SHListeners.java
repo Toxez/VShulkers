@@ -221,8 +221,15 @@ public class SHListeners implements Listener {
                 return;
             }
 
+            p.setMetadata("shulkerOpening", new FixedMetadataValue(VShulkers.getPlugin(VShulkers.class), true));
             openShulker(p, item, p.getInventory().getHeldItemSlot());
             e.setCancelled(true);
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    p.removeMetadata("shulkerOpening", VShulkers.getPlugin(VShulkers.class));
+                }
+            }.runTaskLater(VShulkers.getPlugin(VShulkers.class), 2L);
         }
     }
 
@@ -245,36 +252,52 @@ public class SHListeners implements Listener {
             if (slot >= 0 && slot < p.getInventory().getSize()) {
                 p.getInventory().setItem(slot, shulkerItem);
             }
+
+            if (!p.hasPermission("vshulker.limit")) {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (p.isOnline()) {
+                            checkAndDropExcessShulkers(p);
+                        }
+                    }
+                }.runTaskLater(VShulkers.getPlugin(VShulkers.class), 5L);
+            }
         }
     }
 
-    private void openShulker(Player p, ItemStack item, int slot) {
-        if (item == null || !isShulkerBox(item) || isShulkerOpen(p)) {
-            return;
+    private void checkAndDropExcessShulkers(Player player) {
+        ItemStack[] inventoryContents = player.getInventory().getContents();
+        List<Integer> slotsToClear = new ArrayList<>();
+        int shulkerCount = 0;
+
+        for (int i = 0; i < inventoryContents.length; i++) {
+            ItemStack item = inventoryContents[i];
+            if (isShulkerBox(item)) {
+                if (++shulkerCount > ConfigUtil.shulkerLimit) {
+                    slotsToClear.add(i);
+                }
+            }
         }
 
-        BlockStateMeta meta = (BlockStateMeta) item.getItemMeta();
-        if (meta == null || !(meta.getBlockState() instanceof ShulkerBox)) return;
+        if (!slotsToClear.isEmpty()) {
+            int droppedCount = 0;
+            for (int slot : slotsToClear) {
+                ItemStack item = player.getInventory().getItem(slot);
+                if (item != null && isShulkerBox(item)) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), item.clone());
+                    player.getInventory().setItem(slot, null);
+                    droppedCount++;
+                }
+            }
 
-        ShulkerBox box = (ShulkerBox) meta.getBlockState();
-        UUID uuid = p.getUniqueId();
-
-        openShulkers.put(uuid, box.getInventory());
-        shulkerInfo.put(uuid, new ShulkerInfo(item, slot));
-        p.setMetadata(SHULKER_OPEN_KEY.getKey(), new FixedMetadataValue(VShulkers.getPlugin(VShulkers.class), true));
-        p.openInventory(box.getInventory());
-    }
-
-    private void updateShulkerContents(Inventory inv, ItemStack shulkerItem) {
-        if (shulkerItem == null || !isShulkerBox(shulkerItem)) return;
-
-        BlockStateMeta meta = (BlockStateMeta) shulkerItem.getItemMeta();
-        if (meta == null) return;
-
-        ShulkerBox box = (ShulkerBox) meta.getBlockState();
-        box.getInventory().setContents(inv.getContents());
-        meta.setBlockState(box);
-        shulkerItem.setItemMeta(meta);
+            if (droppedCount > 0) {
+                player.updateInventory();
+                player.sendMessage(ConfigUtil.limitShulkerDroppedMessage
+                        .replace("%limit%", String.valueOf(ConfigUtil.shulkerLimit))
+                        .replace("%dropped%", String.valueOf(droppedCount)));
+            }
+        }
     }
 
     @EventHandler
@@ -320,6 +343,35 @@ public class SHListeners implements Listener {
                 ((BlockStateMeta) item.getItemMeta()).getBlockState() instanceof ShulkerBox;
     }
 
+    private void updateShulkerContents(Inventory inv, ItemStack shulkerItem) {
+        if (shulkerItem == null || !isShulkerBox(shulkerItem)) return;
+
+        BlockStateMeta meta = (BlockStateMeta) shulkerItem.getItemMeta();
+        if (meta == null) return;
+
+        ShulkerBox box = (ShulkerBox) meta.getBlockState();
+        box.getInventory().setContents(inv.getContents());
+        meta.setBlockState(box);
+        shulkerItem.setItemMeta(meta);
+    }
+
+    private void openShulker(Player p, ItemStack item, int slot) {
+        if (item == null || !isShulkerBox(item) || isShulkerOpen(p)) {
+            return;
+        }
+
+        BlockStateMeta meta = (BlockStateMeta) item.getItemMeta();
+        if (meta == null || !(meta.getBlockState() instanceof ShulkerBox)) return;
+
+        ShulkerBox box = (ShulkerBox) meta.getBlockState();
+        UUID uuid = p.getUniqueId();
+
+        openShulkers.put(uuid, box.getInventory());
+        shulkerInfo.put(uuid, new ShulkerInfo(item, slot));
+        p.setMetadata(SHULKER_OPEN_KEY.getKey(), new FixedMetadataValue(VShulkers.getPlugin(VShulkers.class), true));
+        p.openInventory(box.getInventory());
+    }
+
     private void updateShulkerOnInteraction(Player p, Inventory shulkerInventory) {
         UUID uuid = p.getUniqueId();
         ShulkerInfo info = shulkerInfo.get(uuid);
@@ -335,6 +387,16 @@ public class SHListeners implements Listener {
         if (slot >= 0 && slot < p.getInventory().getSize()) {
             p.getInventory().setItem(slot, null);
             p.getInventory().setItem(slot, shulkerItem);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent e) {
+        Player p = e.getPlayer();
+        ItemStack item = e.getItemDrop().getItemStack();
+
+        if (isShulkerBox(item) && (isShulkerOpen(p) || p.hasMetadata("shulkerOpening"))) {
+            e.setCancelled(true);
         }
     }
 }

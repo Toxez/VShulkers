@@ -1,6 +1,7 @@
 package org.txtox8729.vshulkers.listeners;
 
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -9,6 +10,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.txtox8729.vshulkers.VShulkers;
 import org.txtox8729.vshulkers.utils.ConfigUtil;
 
 import java.util.*;
@@ -18,6 +20,7 @@ public class LimitListener implements Listener {
 
     private final Map<UUID, Long> lastMessageTimeMap = new ConcurrentHashMap<>();
     private final JavaPlugin plugin;
+    private static final NamespacedKey SHULKER_OPEN_KEY = new NamespacedKey(VShulkers.getPlugin(VShulkers.class), "shulker-open");
 
     public LimitListener(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -29,7 +32,7 @@ public class LimitListener implements Listener {
             @Override
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    if (!player.hasPermission("vshulker.limit")) {
+                    if (!player.hasPermission("vshulker.limit") && !isShulkerOpen(player)) {
                         checkAndScheduleDrop(player);
                     }
                 }
@@ -123,5 +126,9 @@ public class LimitListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         lastMessageTimeMap.remove(event.getPlayer().getUniqueId());
+    }
+
+    private boolean isShulkerOpen(Player p) {
+        return p.hasMetadata(SHULKER_OPEN_KEY.getKey());
     }
 }
