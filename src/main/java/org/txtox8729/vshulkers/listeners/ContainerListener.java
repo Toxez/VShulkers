@@ -12,18 +12,10 @@ import org.txtox8729.vshulkers.VShulkers;
 import org.txtox8729.vshulkers.utils.ConfigUtil;
 
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ContainerListener implements Listener {
-
-    private static final Set<InventoryType> RESTRICTED_CONTAINERS = EnumSet.of(
-            InventoryType.CHEST, InventoryType.BARREL, InventoryType.BREWING,
-            InventoryType.DISPENSER, InventoryType.DROPPER, InventoryType.HOPPER,
-            InventoryType.FURNACE, InventoryType.BLAST_FURNACE, InventoryType.SMOKER,
-            InventoryType.ENDER_CHEST, InventoryType.SHULKER_BOX
-    );
 
     private static final Set<Material> SHULKER_BOXES = Arrays.stream(Material.values())
             .filter(material -> material.name().endsWith("_SHULKER_BOX") || material == Material.SHULKER_BOX)
@@ -145,7 +137,7 @@ public class ContainerListener implements Listener {
     }
 
     private boolean isRestrictedContainer(InventoryType type) {
-        return RESTRICTED_CONTAINERS.contains(type);
+        return ConfigUtil.bannedContainers.contains(type);
     }
 
     private boolean isShulkerInsideContainer(InventoryInteractEvent event) {

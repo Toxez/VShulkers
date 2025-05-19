@@ -152,3 +152,33 @@ shulker-auto:
   - HEART_OF_THE_SEA
   - NETHER_STAR
   # и тд.....
+
+# Список инвентарей, в которые нельзя класть шалкеры
+# Укажите типы инвентарей (InventoryType)
+# Примеры:
+#
+# - CHEST # Сундук
+# - BARREL # Бочка
+# - BREWING # Зельеварка
+# - DISPENSER # Раздатчик
+# - DROPPER # Выбрасыватель
+# - HOPPER # Воронка
+# - FURNACE # Печь
+# - BLAST_FURNACE # Плавильная печь
+# - SMOKER # Коптильня
+# - ENDER_CHEST # Эндер-сундук
+# - SHULKER_BOX # Шалкер
+#
+# ГЛАВНОЕ, НЕ УБИРАЙТЕ SHULKER_BOX!!!!!
+banned-containers:
+  - CHEST
+  - BARREL
+  - BREWING
+  - DISPENSER
+  - DROPPER
+  - HOPPER
+  - FURNACE
+  - BLAST_FURNACE
+  - SMOKER
+  - ENDER_CHEST
+  - SHULKER_BOX

@@ -3,8 +3,10 @@ package org.txtox8729.vshulkers.utils;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.event.inventory.InventoryType;
 import org.txtox8729.vshulkers.VShulkers;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ConfigUtil {
@@ -38,6 +40,8 @@ public class ConfigUtil {
 
     public static String vanishShulkerOpenDeniedMessage;
     public static String godShulkerOpenDeniedMessage;
+
+    public static List<InventoryType> bannedContainers;
 
     public static void init(VShulkers pluginInstance) {
         plugin = pluginInstance;
@@ -116,5 +120,22 @@ public class ConfigUtil {
 
         vanishShulkerOpenDeniedMessage = HexUtil.translate(config.getString("messages.vanish-shulker-open-denied", "&7[&#D21919✘&7] &7Вы &#D21919не можете &7открыть шалкер в ванише!"));
         godShulkerOpenDeniedMessage = HexUtil.translate(config.getString("messages.god-shulker-open-denied", "&7[&#D21919✘&7] &7Вы &#D21919не можете &7открыть шалкер в режиме бога!"));
+
+        bannedContainers = new ArrayList<>();
+        List<String> containerNames = config.getStringList("banned-containers");
+        if (containerNames.isEmpty()) {
+            containerNames.addAll(List.of(
+                    "SHULKER_BOX", "ENDER_CHEST"
+            ));
+        }
+
+        for (String containerName : containerNames) {
+            try {
+                InventoryType type = InventoryType.valueOf(containerName.toUpperCase());
+                bannedContainers.add(type);
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Ошибка конфига: тип инвентаря '" + containerName + "' не найден!");
+            }
+        }
     }
 }
