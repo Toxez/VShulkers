@@ -31,6 +31,7 @@ public class LimitListener implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
+                if (!ConfigUtil.shulkerLimitEnabled) return;
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     if (!player.hasPermission("vshulker.limit") && !isShulkerOpen(player)) {
                         checkAndScheduleDrop(player);
@@ -103,6 +104,7 @@ public class LimitListener implements Listener {
 
     @EventHandler
     public void onPlayerAttemptPickupItem(PlayerAttemptPickupItemEvent event) {
+        if (!ConfigUtil.shulkerLimitEnabled) return;
         Player player = event.getPlayer();
         if (!player.hasPermission("vshulker.limit") && isShulkerBox(event.getItem().getItemStack())) {
             if (countShulkerBoxes(player.getInventory().getContents()) >= ConfigUtil.shulkerLimit) {

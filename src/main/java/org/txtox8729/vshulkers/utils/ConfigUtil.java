@@ -30,6 +30,7 @@ public class ConfigUtil {
     public static String limitShulkerReachedMessage;
     public static String limitShulkerDroppedMessage;
     public static int shulkerLimit;
+    public static boolean shulkerLimitEnabled;
     public static List<String> allowedItems;
     public static boolean shulkerAutoAllItems;
 
@@ -60,7 +61,7 @@ public class ConfigUtil {
                 pickupSound = Sound.valueOf(soundName);
             } catch (IllegalArgumentException e) {
                 String invalidSound = pickupSoundSec.getString("sound");
-                plugin.getLogger().warning("Ошибка конфига: звук '" + invalidSound + "' не найден!");
+                plugin.getLogger().warning("Ошибка: звук '" + invalidSound + "' не найден!");
                 pickupSound = Sound.valueOf(defaultPickupSoundName);
             }
 
@@ -86,7 +87,7 @@ public class ConfigUtil {
                 denySound = Sound.valueOf(soundName);
             } catch (IllegalArgumentException e) {
                 String invalidSound = denySoundSec.getString("sound");
-                plugin.getLogger().warning("Ошибка конфига: звук '" + invalidSound + "' не найден!");
+                plugin.getLogger().warning("Ошибка: звук '" + invalidSound + "' не найден!");
                 denySound = Sound.valueOf(defaultDenySoundName);
             }
 
@@ -110,6 +111,7 @@ public class ConfigUtil {
         limitShulkerDroppedMessage = HexUtil.translate(config.getString("messages.limit-shulker-dropped", "&7[&#D21919✘&7] &7У вас было выброшено &6%dropped% &7шалкеров, так как лимит &6%limit% &7был превышен!"));
 
         shulkerLimit = config.getInt("settings.limit-shulker-boxes", 3);
+        shulkerLimitEnabled = config.getBoolean("settings.shulker-limit-enabled", true);
         allowedItems = config.getStringList("shulker-auto");
         shulkerAutoAllItems = config.getBoolean("shulker-auto-all-items", true);
 
@@ -134,7 +136,7 @@ public class ConfigUtil {
                 InventoryType type = InventoryType.valueOf(containerName.toUpperCase());
                 bannedContainers.add(type);
             } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Ошибка конфига: тип инвентаря '" + containerName + "' не найден!");
+                plugin.getLogger().warning("Ошибка: тип инвентаря '" + containerName + "' не найден!");
             }
         }
     }
