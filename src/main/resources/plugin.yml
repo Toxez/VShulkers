@@ -5,17 +5,15 @@ api-version: '1.16'
 author: [ Tox_8729 ]
 softdepend: [Essentials]
 
-permissions:
-  vshulker.admin:
-    description: Право для перезагрузки плагина
-    default: op
-  vshulker.bypass:
-    description: Право для переноса шалкеров в эндер сундуке и тд....
-    default: op
-  vshulker.limit:
-    description: Право для обхода ограничений шалкеров
-    default: op
-
 commands:
   vshulker:
-    description: Команда для перезагрузки плагина
+
+permissions:
+  vshulker.admin:
+    default: op
+  vshulker.bypass:
+    default: op
+  vshulker.limit:
+    default: op
+  vshulker.mode.bypass:
+    default: op

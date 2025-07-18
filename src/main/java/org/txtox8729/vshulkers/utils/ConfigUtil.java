@@ -1,6 +1,8 @@
 package org.txtox8729.vshulkers.utils;
 
 import org.bukkit.Sound;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.inventory.InventoryType;
@@ -42,6 +44,11 @@ public class ConfigUtil {
     public static String vanishShulkerOpenDeniedMessage;
     public static String godShulkerOpenDeniedMessage;
 
+    public static boolean shulkerModeEnabled;
+    public static String shulkerModeBossBarMessage;
+    public static BarColor shulkerModeBossBarColor;
+    public static BarStyle shulkerModeBossBarStyle;
+    public static String shulkerModeNotificationType;
     public static List<InventoryType> bannedContainers;
 
     public static void init(VShulkers pluginInstance) {
@@ -61,7 +68,7 @@ public class ConfigUtil {
                 pickupSound = Sound.valueOf(soundName);
             } catch (IllegalArgumentException e) {
                 String invalidSound = pickupSoundSec.getString("sound");
-                plugin.getLogger().warning("Ошибка: звук '" + invalidSound + "' не найден!");
+                plugin.getLogger().warning("звук '" + invalidSound + "' не найден!");
                 pickupSound = Sound.valueOf(defaultPickupSoundName);
             }
 
@@ -87,7 +94,7 @@ public class ConfigUtil {
                 denySound = Sound.valueOf(soundName);
             } catch (IllegalArgumentException e) {
                 String invalidSound = denySoundSec.getString("sound");
-                plugin.getLogger().warning("Ошибка: звук '" + invalidSound + "' не найден!");
+                plugin.getLogger().warning("звук '" + invalidSound + "' не найден!");
                 denySound = Sound.valueOf(defaultDenySoundName);
             }
 
@@ -104,7 +111,7 @@ public class ConfigUtil {
         shulkerOpenEnabled = config.getBoolean("shulkerOpen.enabled", true);
 
         noPermissionMessage = HexUtil.translate(config.getString("messages.no-permission-message", "&7[&#D21919✘&7] &7У вас &#D21919нет прав &7на выполнение этой команды!"));
-        reloadSuccessMessage = HexUtil.translate(config.getString("messages.reload-success-message", "&7[ CD32✔&7] &7Конфигурация  CD32успешно &7перезагружена!"));
+        reloadSuccessMessage = HexUtil.translate(config.getString("messages.reload-success-message", "&7[ CD32✔&7] &7Конфигурация CD32успешно &7перезагружена!"));
         usageMessage = HexUtil.translate(config.getString("messages.usage-message", "&7[&#DBA544★&7] &fИспользование: &#DBA544/vshulker reload"));
         noShulkerInContainerMessage = HexUtil.translate(config.getString("messages.no-shulker-in-container", "&7[&#D21919✘&7] &7Вы &#D21919не можете &7положить сюда шалкер!"));
         limitShulkerReachedMessage = HexUtil.translate(config.getString("messages.limit-shulker-reached", "&7[&#D21919✘&7] &7Вы &#D21919не можете &7хранить более &6%limit% &7шалкеров в инвентаре!"));
@@ -123,6 +130,26 @@ public class ConfigUtil {
         vanishShulkerOpenDeniedMessage = HexUtil.translate(config.getString("messages.vanish-shulker-open-denied", "&7[&#D21919✘&7] &7Вы &#D21919не можете &7открыть шалкер в ванише!"));
         godShulkerOpenDeniedMessage = HexUtil.translate(config.getString("messages.god-shulker-open-denied", "&7[&#D21919✘&7] &7Вы &#D21919не можете &7открыть шалкер в режиме бога!"));
 
+        shulkerModeEnabled = config.getBoolean("shulkermode.enabled", true);
+        shulkerModeBossBarMessage = HexUtil.translate(config.getString("shulkermode.bossbar-message", "&7[&#D21919✘&7] &cРежим шалкера активен!"));
+        try {
+            shulkerModeBossBarColor = BarColor.valueOf(config.getString("shulkermode.bossbar-color", "RED").toUpperCase());
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("цвет боссбара '" + config.getString("shulkermode.bossbar-color") + "' не найден");
+            shulkerModeBossBarColor = BarColor.RED;
+        }
+        try {
+            shulkerModeBossBarStyle = BarStyle.valueOf(config.getString("shulkermode.bossbar-style", "SOLID").toUpperCase());
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("стиль боссбара '" + config.getString("shulkermode.bossbar-style") + "' не найден");
+            shulkerModeBossBarStyle = BarStyle.SOLID;
+        }
+        shulkerModeNotificationType = config.getString("shulkermode.notification-type", "BOSSBAR").toUpperCase();
+        if (!shulkerModeNotificationType.equals("BOSSBAR") && !shulkerModeNotificationType.equals("ACTIONBAR")) {
+            plugin.getLogger().warning("настройка '" + shulkerModeNotificationType + "' не поддерживается");
+            shulkerModeNotificationType = "BOSSBAR";
+        }
+
         bannedContainers = new ArrayList<>();
         List<String> containerNames = config.getStringList("banned-containers");
         if (containerNames.isEmpty()) {
@@ -136,7 +163,7 @@ public class ConfigUtil {
                 InventoryType type = InventoryType.valueOf(containerName.toUpperCase());
                 bannedContainers.add(type);
             } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Ошибка: тип инвентаря '" + containerName + "' не найден!");
+                plugin.getLogger().warning("инвентарь '" + containerName + "' не найден!");
             }
         }
     }

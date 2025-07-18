@@ -9,11 +9,13 @@ import org.txtox8729.vshulkers.commands.VTabCompleter;
 import org.txtox8729.vshulkers.listeners.ContainerListener;
 import org.txtox8729.vshulkers.listeners.LimitListener;
 import org.txtox8729.vshulkers.listeners.SHListeners;
+import org.txtox8729.vshulkers.listeners.ShulkerModeListener;
 import org.txtox8729.vshulkers.utils.ConfigUtil;
 
 public final class VShulkers extends JavaPlugin {
     private static VShulkers instance;
     private Essentials essentials;
+    private ShulkerModeListener shulkerModeListener;
 
     @Override
     public void onEnable() {
@@ -27,6 +29,8 @@ public final class VShulkers extends JavaPlugin {
 
         Bukkit.getPluginManager().registerEvents(new SHListeners(), this);
         Bukkit.getPluginManager().registerEvents(new ContainerListener(), this);
+        shulkerModeListener = new ShulkerModeListener(this);
+        Bukkit.getPluginManager().registerEvents(shulkerModeListener, this);
 
         LimitListener limitListener = new LimitListener(this);
         Bukkit.getPluginManager().registerEvents(limitListener, this);
@@ -34,12 +38,15 @@ public final class VShulkers extends JavaPlugin {
         this.getCommand("vshulker").setExecutor(new ReloadCommand());
         this.getCommand("vshulker").setTabCompleter(new VTabCompleter());
 
-        getLogger().info(ChatColor.GREEN + "Плагин VShulker успешно включен! версия: 1.5.3");
+        getLogger().info(ChatColor.GREEN + "Плагин VShulker успешно включен! версия: 1.6");
         getLogger().info(ChatColor.GREEN + "Автор: Tox_8729");
     }
 
     @Override
     public void onDisable() {
+        if (shulkerModeListener != null) {
+            shulkerModeListener.cleanup();
+        }
     }
 
     public void reloadPlugin() {
