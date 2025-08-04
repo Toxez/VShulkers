@@ -399,4 +399,14 @@ public class SHListeners implements Listener {
             e.setCancelled(true);
         }
     }
+
+    @EventHandler
+    public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent e) {
+        Player p = e.getPlayer();
+
+        if (isShulkerOpen(p) || p.hasMetadata("shulkerOpening")) {
+            p.sendMessage(ConfigUtil.shulkerCommandDenied);
+            e.setCancelled(true);
+        }
+    }
 }
