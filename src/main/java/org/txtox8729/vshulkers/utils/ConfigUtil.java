@@ -31,6 +31,7 @@ public class ConfigUtil {
     public static String noShulkerInContainerMessage;
     public static String limitShulkerReachedMessage;
     public static String limitShulkerDroppedMessage;
+    public static String shulkerCommandDenied;
     public static int shulkerLimit;
     public static boolean shulkerLimitEnabled;
     public static List<String> allowedItems;
@@ -116,6 +117,7 @@ public class ConfigUtil {
         noShulkerInContainerMessage = HexUtil.translate(config.getString("messages.no-shulker-in-container", "&7[&#D21919✘&7] &7Вы &#D21919не можете &7положить сюда шалкер!"));
         limitShulkerReachedMessage = HexUtil.translate(config.getString("messages.limit-shulker-reached", "&7[&#D21919✘&7] &7Вы &#D21919не можете &7хранить более &6%limit% &7шалкеров в инвентаре!"));
         limitShulkerDroppedMessage = HexUtil.translate(config.getString("messages.limit-shulker-dropped", "&7[&#D21919✘&7] &7У вас было выброшено &6%dropped% &7шалкеров, так как лимит &6%limit% &7был превышен!"));
+        shulkerCommandDenied = HexUtil.translate(config.getString("messages.shulker-command-denied", "&7[&#DB4444✘&7] &7Вы &#DB4444не можете &7использовать команды с открытым шалкером!"));
 
         shulkerLimit = config.getInt("settings.limit-shulker-boxes", 3);
         shulkerLimitEnabled = config.getBoolean("settings.shulker-limit-enabled", true);
