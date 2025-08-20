@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class ContainerListener implements Listener {
 
     private static final Set<Material> SHULKER_BOXES = Arrays.stream(Material.values())
-            .filter(material -> material.name().endsWith("_SHULKER_BOX") || material == Material.SHULKER_BOX)
+            .filter(material -> material.name().endsWith("SHULKER_BOX"))
             .collect(Collectors.toSet());
 
     private static final long MESSAGE_COOLDOWN = 1000L;
@@ -67,7 +67,17 @@ public class ContainerListener implements Listener {
 
     @EventHandler
     public void onInventoryMove(InventoryMoveItemEvent event) {
-        if (isShulkerBox(event.getItem()) && isRestrictedContainer(event.getDestination().getType())) {
+        if (isShulkerBox(event.getItem()) &&
+                (isRestrictedContainer(event.getDestination().getType()) ||
+                        isRestrictedContainer(event.getSource().getType()) ||
+                        isRestrictedContainer(event.getInitiator().getType()))) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onInventoryPickupItem(InventoryPickupItemEvent event) {
+        if (isShulkerBox(event.getItem().getItemStack()) && isRestrictedContainer(event.getInventory().getType())) {
             event.setCancelled(true);
         }
     }

@@ -95,7 +95,7 @@ public class ShulkerModeListener implements Listener {
     }
 
     private boolean isShulkerBox(ItemStack item) {
-        return item != null && item.getType().name().endsWith("_SHULKER_BOX");
+        return item != null && item.getType().name().endsWith("SHULKER_BOX");
     }
 
     private void showNotification(Player player) {
