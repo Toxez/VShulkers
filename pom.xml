@@ -6,7 +6,7 @@
 
   <groupId>org.txtox8729</groupId>
   <artifactId>VShulkers</artifactId>
-  <version>1.0</version>
+  <version>1.7</version>
   <packaging>jar</packaging>
 
   <name>VShulkers</name>
@@ -75,6 +75,12 @@
           <groupId>net.essentialsx</groupId>
           <artifactId>EssentialsX</artifactId>
           <version>2.20.1</version>
+          <scope>provided</scope>
+      </dependency>
+      <dependency>
+          <groupId>org.projectlombok</groupId>
+          <artifactId>lombok</artifactId>
+          <version>1.18.28</version>
           <scope>provided</scope>
       </dependency>
   </dependencies>

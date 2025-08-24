@@ -12,50 +12,43 @@ import org.txtox8729.vshulkers.listeners.SHListeners;
 import org.txtox8729.vshulkers.listeners.ShulkerModeListener;
 import org.txtox8729.vshulkers.utils.ConfigUtil;
 
+import java.util.Optional;
+
 public final class VShulkers extends JavaPlugin {
-    private static VShulkers instance;
+
     private Essentials essentials;
     private ShulkerModeListener shulkerModeListener;
 
     @Override
     public void onEnable() {
-        instance = this;
         ConfigUtil.init(this);
 
-        if (Bukkit.getPluginManager().getPlugin("Essentials") != null) {
-            essentials = (Essentials) Bukkit.getPluginManager().getPlugin("Essentials");
-        } else {
-        }
+        essentials = (Essentials) Optional.ofNullable(Bukkit.getPluginManager().getPlugin("Essentials")).orElse(null);
 
         Bukkit.getPluginManager().registerEvents(new SHListeners(), this);
         Bukkit.getPluginManager().registerEvents(new ContainerListener(), this);
+
         shulkerModeListener = new ShulkerModeListener(this);
         Bukkit.getPluginManager().registerEvents(shulkerModeListener, this);
 
         LimitListener limitListener = new LimitListener(this);
         Bukkit.getPluginManager().registerEvents(limitListener, this);
 
-        this.getCommand("vshulker").setExecutor(new ReloadCommand());
-        this.getCommand("vshulker").setTabCompleter(new VTabCompleter());
+        getCommand("vshulker").setExecutor(new ReloadCommand());
+        getCommand("vshulker").setTabCompleter(new VTabCompleter());
 
-        getLogger().info(ChatColor.GREEN + "Плагин VShulker успешно включен! версия: 1.6.1");
+        getLogger().info(ChatColor.GREEN + "Плагин VShulker успешно включен! версия: 1.7");
         getLogger().info(ChatColor.GREEN + "Автор: Tox_8729");
     }
 
     @Override
     public void onDisable() {
-        if (shulkerModeListener != null) {
-            shulkerModeListener.cleanup();
-        }
+        Optional.ofNullable(shulkerModeListener).ifPresent(ShulkerModeListener::cleanup);
     }
 
     public void reloadPlugin() {
-        this.reloadConfig();
+        reloadConfig();
         ConfigUtil.init(this);
-    }
-
-    public static VShulkers getInstance() {
-        return instance;
     }
 
     public Essentials getEssentials() {

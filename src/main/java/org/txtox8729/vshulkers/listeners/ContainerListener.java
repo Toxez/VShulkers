@@ -1,5 +1,6 @@
 package org.txtox8729.vshulkers.listeners;
 
+import lombok.NonNull;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -10,16 +11,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.txtox8729.vshulkers.VShulkers;
 import org.txtox8729.vshulkers.utils.ConfigUtil;
+import org.txtox8729.vshulkers.utils.ShulkerUtils;
 
-import java.util.Arrays;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ContainerListener implements Listener {
 
-    private static final Set<Material> SHULKER_BOXES = Arrays.stream(Material.values())
-            .filter(material -> material.name().endsWith("SHULKER_BOX"))
-            .collect(Collectors.toSet());
+    private static final Set<Material> SHULKER_BOXES = ShulkerUtils.getShulkerMaterials();
 
     private static final long MESSAGE_COOLDOWN = 1000L;
 
@@ -28,18 +27,11 @@ public class ContainerListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
         Inventory topInventory = event.getView().getTopInventory();
-        if (!isRestrictedContainer(topInventory.getType())) return;
+        if (!ConfigUtil.bannedContainers.contains(topInventory.getType())) return;
 
         if (player.hasPermission("vshulker.bypass")) return;
 
-        boolean isShulkerInvolved = checkForShulker(event, player);
-
-        if (isShulkerInvolved) {
-            if (isShulkerInsideContainer(event)) {
-                event.setCancelled(true);
-                return;
-            }
-
+        if (checkForShulker(event, player) || ShulkerUtils.isShulkerInContainer(topInventory)) {
             event.setCancelled(true);
             sendMessageWithCooldown(player, ConfigUtil.noShulkerInContainerMessage);
         }
@@ -50,16 +42,12 @@ public class ContainerListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
         Inventory topInventory = event.getView().getTopInventory();
-        if (!isRestrictedContainer(topInventory.getType())) return;
+        if (!ConfigUtil.bannedContainers.contains(topInventory.getType())) return;
 
         if (player.hasPermission("vshulker.bypass")) return;
 
-        if (event.getOldCursor() != null && isShulkerBox(event.getOldCursor())) {
-            if (isShulkerInsideContainer(event)) {
-                event.setCancelled(true);
-                return;
-            }
-
+        ItemStack cursor = event.getOldCursor();
+        if (ShulkerUtils.isShulkerBox(cursor) || ShulkerUtils.isShulkerInContainer(topInventory)) {
             event.setCancelled(true);
             sendMessageWithCooldown(player, ConfigUtil.noShulkerInContainerMessage);
         }
@@ -67,18 +55,21 @@ public class ContainerListener implements Listener {
 
     @EventHandler
     public void onInventoryMove(InventoryMoveItemEvent event) {
-        if (isShulkerBox(event.getItem()) &&
-                (isRestrictedContainer(event.getDestination().getType()) ||
-                        isRestrictedContainer(event.getSource().getType()) ||
-                        isRestrictedContainer(event.getInitiator().getType()))) {
+        if (ShulkerUtils.isShulkerBox(event.getItem()) &&
+                (ConfigUtil.bannedContainers.contains(event.getDestination().getType()) ||
+                        ConfigUtil.bannedContainers.contains(event.getSource().getType()) ||
+                        ConfigUtil.bannedContainers.contains(event.getInitiator().getType()))) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onInventoryPickupItem(InventoryPickupItemEvent event) {
-        if (isShulkerBox(event.getItem().getItemStack()) && isRestrictedContainer(event.getInventory().getType())) {
+        if (ShulkerUtils.isShulkerBox(event.getItem().getItemStack()) && ConfigUtil.bannedContainers.contains(event.getInventory().getType())) {
             event.setCancelled(true);
+            if (event.getInventory().getHolder() instanceof Player player) {
+                sendMessageWithCooldown(player, ConfigUtil.noShulkerInContainerMessage);
+            }
         }
     }
 
@@ -89,90 +80,31 @@ public class ContainerListener implements Listener {
         }
     }
 
-    private boolean checkForShulker(InventoryClickEvent event, Player player) {
-        if (isShulkerBox(event.getCursor()) || isShulkerBox(event.getCurrentItem())) {
-            return true;
-        }
-
-        if (isShulkerBox(player.getInventory().getItemInOffHand())) {
-            return true;
-        }
-
-        if (event.getAction() == InventoryAction.HOTBAR_SWAP) {
-            int hotbarSlot = event.getHotbarButton();
-
-            if (hotbarSlot >= 0 && hotbarSlot < player.getInventory().getSize()) {
-                if (isShulkerBox(player.getInventory().getItem(hotbarSlot))) {
-                    event.setCancelled(true);
-                    return true;
-                }
-            }
-        }
-
-        if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
-            if (isShulkerBox(event.getCurrentItem())) {
-                return true;
-            }
-        }
-
-        if (event.getClick() == ClickType.SWAP_OFFHAND) {
-            if (isShulkerBox(player.getInventory().getItemInOffHand())) {
-                return true;
-            }
-        }
-
-        if (event.getClick() == ClickType.NUMBER_KEY) {
-            int hotbarSlot = event.getHotbarButton();
-            if (hotbarSlot >= 0 && hotbarSlot < player.getInventory().getSize()) {
-                ItemStack itemInHotbar = player.getInventory().getItem(hotbarSlot);
-
-                if (isShulkerBox(itemInHotbar)) {
-                    event.setCancelled(true);
-                    return true;
-                }
-            }
-        }
-
-        if (event.getAction() == InventoryAction.SWAP_WITH_CURSOR) {
-            if (isShulkerBox(event.getCursor()) || isShulkerBox(event.getCurrentItem())) {
-                return true;
-            }
-        }
-
-        return false;
+    private boolean checkForShulker(@NonNull InventoryClickEvent event, @NonNull Player player) {
+        return Stream.of(event.getCursor(), event.getCurrentItem(), player.getInventory().getItemInOffHand())
+                .anyMatch(ShulkerUtils::isShulkerBox) ||
+                (event.getAction() == InventoryAction.HOTBAR_SWAP && checkHotbarSlot(event.getHotbarButton(), player)) ||
+                (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && ShulkerUtils.isShulkerBox(event.getCurrentItem())) ||
+                (event.getClick() == ClickType.SWAP_OFFHAND && ShulkerUtils.isShulkerBox(player.getInventory().getItemInOffHand())) ||
+                (event.getClick() == ClickType.NUMBER_KEY && checkHotbarSlot(event.getHotbarButton(), player)) ||
+                (event.getAction() == InventoryAction.SWAP_WITH_CURSOR && (ShulkerUtils.isShulkerBox(event.getCursor()) || ShulkerUtils.isShulkerBox(event.getCurrentItem())));
     }
 
-    private boolean isShulkerBox(ItemStack item) {
-        return item != null && SHULKER_BOXES.contains(item.getType());
+    private boolean checkHotbarSlot(int slot, Player player) {
+        return slot >= 0 && slot < player.getInventory().getSize() && ShulkerUtils.isShulkerBox(player.getInventory().getItem(slot));
     }
 
-    private boolean isRestrictedContainer(InventoryType type) {
-        return ConfigUtil.bannedContainers.contains(type);
-    }
-
-    private boolean isShulkerInsideContainer(InventoryInteractEvent event) {
-        Inventory topInventory = event.getView().getTopInventory();
-        for (ItemStack item : topInventory.getContents()) {
-            if (isShulkerBox(item)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void sendMessageWithCooldown(Player player, String message) {
+    private void sendMessageWithCooldown(@NonNull Player player, @NonNull String message) {
         long currentTime = System.currentTimeMillis();
         String metaKey = "shulkerMessageCooldown";
 
-        if (player.hasMetadata(metaKey)) {
-            long lastSend = player.getMetadata(metaKey).get(0).asLong();
-            if (currentTime - lastSend < MESSAGE_COOLDOWN) return;
+        if (player.hasMetadata(metaKey) && currentTime - player.getMetadata(metaKey).get(0).asLong() < MESSAGE_COOLDOWN) {
+            return;
         }
 
         player.sendMessage(message);
         if (ConfigUtil.denySoundEnabled) {
-            player.playSound(player.getLocation(), ConfigUtil.denySound,
-                    ConfigUtil.denySoundVolume, ConfigUtil.denySoundPitch);
+            player.playSound(player.getLocation(), ConfigUtil.denySound, ConfigUtil.denySoundVolume, ConfigUtil.denySoundPitch);
         }
         player.setMetadata(metaKey, new FixedMetadataValue(VShulkers.getPlugin(VShulkers.class), currentTime));
     }

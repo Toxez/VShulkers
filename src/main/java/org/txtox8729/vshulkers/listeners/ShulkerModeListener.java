@@ -1,5 +1,6 @@
 package org.txtox8729.vshulkers.listeners;
 
+import lombok.NonNull;
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
@@ -14,12 +15,15 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.txtox8729.vshulkers.utils.ConfigUtil;
+import org.txtox8729.vshulkers.utils.ShulkerUtils;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ShulkerModeListener implements Listener {
+
     private final JavaPlugin plugin;
     private final Map<UUID, BossBar> playerBossBars = new ConcurrentHashMap<>();
     private final Map<UUID, Boolean> shulkerCache = new ConcurrentHashMap<>();
@@ -31,18 +35,15 @@ public class ShulkerModeListener implements Listener {
     }
 
     public void cleanup() {
-        if (checkTask != null) {
-            checkTask.cancel();
-            checkTask = null;
-        }
+        Optional.ofNullable(checkTask).ifPresent(BukkitRunnable::cancel);
         playerBossBars.values().forEach(BossBar::removeAll);
         playerBossBars.clear();
         shulkerCache.clear();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (ConfigUtil.shulkerModeNotificationType.equals("ACTIONBAR")) {
+        Bukkit.getOnlinePlayers().forEach(player -> {
+            if ("ACTIONBAR".equals(ConfigUtil.shulkerModeNotificationType)) {
                 player.sendActionBar("");
             }
-        }
+        });
     }
 
     private void startShulkerModeCheckTask() {
@@ -50,145 +51,82 @@ public class ShulkerModeListener implements Listener {
             @Override
             public void run() {
                 if (!ConfigUtil.shulkerModeEnabled) {
-                    playerBossBars.values().forEach(BossBar::removeAll);
-                    playerBossBars.clear();
-                    shulkerCache.clear();
-                    for (Player player : Bukkit.getOnlinePlayers()) {
-                        if (ConfigUtil.shulkerModeNotificationType.equals("ACTIONBAR")) {
-                            player.sendActionBar("");
-                        }
-                    }
+                    cleanup();
                     return;
                 }
 
-                for (Player player : Bukkit.getOnlinePlayers()) {
-                    if (player.hasPermission("vshulker.mode.bypass")) {
-                        shulkerCache.remove(player.getUniqueId());
-                        removeNotification(player);
-                        continue;
-                    }
-
-                    Boolean hasShulker = shulkerCache.get(player.getUniqueId());
-                    if (hasShulker == null || hasShulker) {
-                        hasShulker = hasShulkerBox(player);
-                        shulkerCache.put(player.getUniqueId(), hasShulker);
-                    }
-
-                    if (hasShulker) {
-                        showNotification(player);
-                    } else {
-                        removeNotification(player);
-                    }
-                }
+                Bukkit.getOnlinePlayers().stream()
+                        .filter(player -> !player.hasPermission("vshulker.mode.bypass"))
+                        .forEach(player -> {
+                            boolean hasShulker = shulkerCache.computeIfAbsent(player.getUniqueId(), k -> ShulkerUtils.hasShulkerBox(player));
+                            if (hasShulker) {
+                                showNotification(player);
+                            } else {
+                                removeNotification(player);
+                            }
+                        });
             }
         };
         checkTask.runTaskTimer(plugin, 0L, 20L);
     }
 
-    private boolean hasShulkerBox(Player player) {
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (isShulkerBox(item)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isShulkerBox(ItemStack item) {
-        return item != null && item.getType().name().endsWith("SHULKER_BOX");
-    }
-
-    private void showNotification(Player player) {
-        if (ConfigUtil.shulkerModeNotificationType.equals("BOSSBAR")) {
-            showBossBar(player);
-        } else if (ConfigUtil.shulkerModeNotificationType.equals("ACTIONBAR")) {
-            showActionBar(player);
+    private void showNotification(@NonNull Player player) {
+        switch (ConfigUtil.shulkerModeNotificationType) {
+            case "BOSSBAR" -> showBossBar(player);
+            case "ACTIONBAR" -> player.sendActionBar(ConfigUtil.shulkerModeBossBarMessage);
         }
     }
 
-    private void removeNotification(Player player) {
-        if (ConfigUtil.shulkerModeNotificationType.equals("BOSSBAR")) {
-            removeBossBar(player);
-        } else if (ConfigUtil.shulkerModeNotificationType.equals("ACTIONBAR")) {
-            player.sendActionBar("");
+    private void removeNotification(@NonNull Player player) {
+        switch (ConfigUtil.shulkerModeNotificationType) {
+            case "BOSSBAR" -> removeBossBar(player);
+            case "ACTIONBAR" -> player.sendActionBar("");
         }
     }
 
-    private void showBossBar(Player player) {
+    private void showBossBar(@NonNull Player player) {
         UUID uuid = player.getUniqueId();
         BossBar bossBar = playerBossBars.computeIfAbsent(uuid, k ->
                 Bukkit.createBossBar(ConfigUtil.shulkerModeBossBarMessage, ConfigUtil.shulkerModeBossBarColor, ConfigUtil.shulkerModeBossBarStyle)
         );
         bossBar.setProgress(1.0);
-
-        if (!bossBar.getPlayers().contains(player)) {
-            bossBar.addPlayer(player);
-        }
+        bossBar.addPlayer(player);
     }
 
-    private void removeBossBar(Player player) {
-        UUID uuid = player.getUniqueId();
-        BossBar bossBar = playerBossBars.remove(uuid);
-        if (bossBar != null) {
-            bossBar.removePlayer(player);
-        }
-    }
-
-    private void showActionBar(Player player) {
-        player.sendActionBar(ConfigUtil.shulkerModeBossBarMessage);
+    private void removeBossBar(@NonNull Player player) {
+        Optional.ofNullable(playerBossBars.remove(player.getUniqueId())).ifPresent(bossBar -> bossBar.removePlayer(player));
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player) || !ConfigUtil.shulkerModeEnabled || player.hasPermission("vshulker.mode.bypass")) {
-            return;
-        }
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                shulkerCache.put(player.getUniqueId(), hasShulkerBox(player));
-            }
-        }.runTaskLater(plugin, 1L);
+        updateCacheOnInventoryEvent(event.getWhoClicked());
     }
 
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player) || !ConfigUtil.shulkerModeEnabled || player.hasPermission("vshulker.mode.bypass")) {
-            return;
-        }
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                shulkerCache.put(player.getUniqueId(), hasShulkerBox(player));
-            }
-        }.runTaskLater(plugin, 1L);
+        updateCacheOnInventoryEvent(event.getWhoClicked());
     }
 
     @EventHandler
     public void onPlayerPickupItem(PlayerAttemptPickupItemEvent event) {
-        if (!ConfigUtil.shulkerModeEnabled || event.getPlayer().hasPermission("vshulker.mode.bypass")) {
-            return;
-        }
-        if (isShulkerBox(event.getItem().getItemStack())) {
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    shulkerCache.put(event.getPlayer().getUniqueId(), hasShulkerBox(event.getPlayer()));
-                }
-            }.runTaskLater(plugin, 1L);
+        if (ShulkerUtils.isShulkerBox(event.getItem().getItemStack())) {
+            updateCacheOnInventoryEvent(event.getPlayer());
         }
     }
 
     @EventHandler
     public void onPlayerDropItem(PlayerDropItemEvent event) {
-        if (!ConfigUtil.shulkerModeEnabled || event.getPlayer().hasPermission("vshulker.mode.bypass")) {
-            return;
+        if (ShulkerUtils.isShulkerBox(event.getItemDrop().getItemStack())) {
+            updateCacheOnInventoryEvent(event.getPlayer());
         }
-        if (isShulkerBox(event.getItemDrop().getItemStack())) {
+    }
+
+    private void updateCacheOnInventoryEvent(org.bukkit.entity.HumanEntity whoClicked) {
+        if (whoClicked instanceof Player player && ConfigUtil.shulkerModeEnabled && !player.hasPermission("vshulker.mode.bypass")) {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    shulkerCache.put(event.getPlayer().getUniqueId(), hasShulkerBox(event.getPlayer()));
+                    shulkerCache.put(player.getUniqueId(), ShulkerUtils.hasShulkerBox(player));
                 }
             }.runTaskLater(plugin, 1L);
         }
@@ -197,29 +135,11 @@ public class ShulkerModeListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        if (!ConfigUtil.shulkerModeEnabled || player.hasPermission("vshulker.mode.bypass")) {
-            shulkerCache.remove(player.getUniqueId());
-            removeNotification(player);
-            return;
-        }
-
-        ItemStack[] inventoryContents = player.getInventory().getContents();
-        int droppedCount = 0;
-
-        for (int i = 0; i < inventoryContents.length; i++) {
-            ItemStack item = inventoryContents[i];
-            if (isShulkerBox(item)) {
-                player.getWorld().dropItemNaturally(player.getLocation(), item.clone());
-                player.getInventory().setItem(i, null);
-                droppedCount++;
-            }
-        }
-
-        if (droppedCount > 0) {
-            player.updateInventory();
-        }
-
         shulkerCache.remove(player.getUniqueId());
         removeNotification(player);
+
+        if (ConfigUtil.shulkerModeEnabled && !player.hasPermission("vshulker.mode.bypass")) {
+            ShulkerUtils.checkAndDropExcessShulkers(player, Integer.MAX_VALUE);
+        }
     }
 }

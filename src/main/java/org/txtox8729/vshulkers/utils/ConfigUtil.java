@@ -1,5 +1,6 @@
 package org.txtox8729.vshulkers.utils;
 
+import lombok.NonNull;
 import org.bukkit.Sound;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -8,8 +9,8 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.inventory.InventoryType;
 import org.txtox8729.vshulkers.VShulkers;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ConfigUtil {
     public static VShulkers plugin;
@@ -52,62 +53,13 @@ public class ConfigUtil {
     public static String shulkerModeNotificationType;
     public static List<InventoryType> bannedContainers;
 
-    public static void init(VShulkers pluginInstance) {
+    public static void init(@NonNull VShulkers pluginInstance) {
         plugin = pluginInstance;
         plugin.saveDefaultConfig();
         FileConfiguration config = plugin.getConfig();
 
-        String defaultPickupSoundName = "ENTITY_ITEM_PICKUP";
-        float defaultPickupPitch = 1.2F;
-        float defaultPickupVolume = 0.4F;
-        boolean defaultPickupSoundEnabled = true;
-
-        ConfigurationSection pickupSoundSec = config.getConfigurationSection("pickupSound");
-        if (pickupSoundSec != null) {
-            try {
-                String soundName = pickupSoundSec.getString("sound", defaultPickupSoundName).toUpperCase();
-                pickupSound = Sound.valueOf(soundName);
-            } catch (IllegalArgumentException e) {
-                String invalidSound = pickupSoundSec.getString("sound");
-                plugin.getLogger().warning("звук '" + invalidSound + "' не найден!");
-                pickupSound = Sound.valueOf(defaultPickupSoundName);
-            }
-
-            pickupSoundPitch = (float) pickupSoundSec.getDouble("pitch", defaultPickupPitch);
-            pickupSoundVolume = (float) pickupSoundSec.getDouble("volume", defaultPickupVolume);
-            pickupSoundEnabled = pickupSoundSec.getBoolean("enabled", defaultPickupSoundEnabled);
-        } else {
-            pickupSound = Sound.valueOf(defaultPickupSoundName);
-            pickupSoundPitch = defaultPickupPitch;
-            pickupSoundVolume = defaultPickupVolume;
-            pickupSoundEnabled = defaultPickupSoundEnabled;
-        }
-
-        String defaultDenySoundName = "BLOCK_NOTE_BLOCK_BASS";
-        float defaultDenyPitch = 0.5F;
-        float defaultDenyVolume = 1.0F;
-        boolean defaultDenySoundEnabled = true;
-
-        ConfigurationSection denySoundSec = config.getConfigurationSection("denySound");
-        if (denySoundSec != null) {
-            try {
-                String soundName = denySoundSec.getString("sound", defaultDenySoundName).toUpperCase();
-                denySound = Sound.valueOf(soundName);
-            } catch (IllegalArgumentException e) {
-                String invalidSound = denySoundSec.getString("sound");
-                plugin.getLogger().warning("звук '" + invalidSound + "' не найден!");
-                denySound = Sound.valueOf(defaultDenySoundName);
-            }
-
-            denySoundPitch = (float) denySoundSec.getDouble("pitch", defaultDenyPitch);
-            denySoundVolume = (float) denySoundSec.getDouble("volume", defaultDenyVolume);
-            denySoundEnabled = denySoundSec.getBoolean("enabled", defaultDenySoundEnabled);
-        } else {
-            denySound = Sound.valueOf(defaultDenySoundName);
-            denySoundPitch = defaultDenyPitch;
-            denySoundVolume = defaultDenyVolume;
-            denySoundEnabled = defaultDenySoundEnabled;
-        }
+        initPickupSound(config);
+        initDenySound(config);
 
         shulkerOpenEnabled = config.getBoolean("shulkerOpen.enabled", true);
 
@@ -134,39 +86,81 @@ public class ConfigUtil {
 
         shulkerModeEnabled = config.getBoolean("shulkermode.enabled", true);
         shulkerModeBossBarMessage = HexUtil.translate(config.getString("shulkermode.bossbar-message", "&7[&#D21919✘&7] &cРежим шалкера активен!"));
-        try {
-            shulkerModeBossBarColor = BarColor.valueOf(config.getString("shulkermode.bossbar-color", "RED").toUpperCase());
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("цвет боссбара '" + config.getString("shulkermode.bossbar-color") + "' не найден");
-            shulkerModeBossBarColor = BarColor.RED;
-        }
-        try {
-            shulkerModeBossBarStyle = BarStyle.valueOf(config.getString("shulkermode.bossbar-style", "SOLID").toUpperCase());
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("стиль боссбара '" + config.getString("shulkermode.bossbar-style") + "' не найден");
-            shulkerModeBossBarStyle = BarStyle.SOLID;
-        }
-        shulkerModeNotificationType = config.getString("shulkermode.notification-type", "BOSSBAR").toUpperCase();
-        if (!shulkerModeNotificationType.equals("BOSSBAR") && !shulkerModeNotificationType.equals("ACTIONBAR")) {
-            plugin.getLogger().warning("настройка '" + shulkerModeNotificationType + "' не поддерживается");
-            shulkerModeNotificationType = "BOSSBAR";
-        }
+        shulkerModeBossBarColor = initBarColor(config.getString("shulkermode.bossbar-color", "RED"));
+        shulkerModeBossBarStyle = initBarStyle(config.getString("shulkermode.bossbar-style", "SOLID"));
+        shulkerModeNotificationType = initNotificationType(config.getString("shulkermode.notification-type", "BOSSBAR"));
 
-        bannedContainers = new ArrayList<>();
-        List<String> containerNames = config.getStringList("banned-containers");
-        if (containerNames.isEmpty()) {
-            containerNames.addAll(List.of(
-                    "SHULKER_BOX", "ENDER_CHEST"
-            ));
-        }
+        bannedContainers = config.getStringList("banned-containers").stream()
+                .map(String::toUpperCase)
+                .map(ConfigUtil::parseInventoryType)
+                .filter(type -> type != null)
+                .collect(Collectors.toList());
 
-        for (String containerName : containerNames) {
-            try {
-                InventoryType type = InventoryType.valueOf(containerName.toUpperCase());
-                bannedContainers.add(type);
-            } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("инвентарь '" + containerName + "' не найден!");
-            }
+        if (bannedContainers.isEmpty()) {
+            bannedContainers.addAll(List.of(InventoryType.SHULKER_BOX, InventoryType.ENDER_CHEST));
+        }
+    }
+
+    private static void initPickupSound(@NonNull FileConfiguration config) {
+        ConfigurationSection sec = config.getConfigurationSection("pickupSound");
+        String soundName = sec != null ? sec.getString("sound", "ENTITY_ITEM_PICKUP") : "ENTITY_ITEM_PICKUP";
+        pickupSound = parseSound(soundName.toUpperCase(), "ENTITY_ITEM_PICKUP");
+        pickupSoundPitch = (float) (sec != null ? sec.getDouble("pitch", 1.2) : 1.2);
+        pickupSoundVolume = (float) (sec != null ? sec.getDouble("volume", 0.4) : 0.4);
+        pickupSoundEnabled = sec != null ? sec.getBoolean("enabled", true) : true;
+    }
+
+    private static void initDenySound(@NonNull FileConfiguration config) {
+        ConfigurationSection sec = config.getConfigurationSection("denySound");
+        String soundName = sec != null ? sec.getString("sound", "BLOCK_NOTE_BLOCK_BASS") : "BLOCK_NOTE_BLOCK_BASS";
+        denySound = parseSound(soundName.toUpperCase(), "BLOCK_NOTE_BLOCK_BASS");
+        denySoundPitch = (float) (sec != null ? sec.getDouble("pitch", 0.5) : 0.5);
+        denySoundVolume = (float) (sec != null ? sec.getDouble("volume", 1.0) : 1.0);
+        denySoundEnabled = sec != null ? sec.getBoolean("enabled", true) : true;
+    }
+
+    private static Sound parseSound(@NonNull String name, @NonNull String defaultName) {
+        try {
+            return Sound.valueOf(name);
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Звук '" + name + "' не найден");
+            return Sound.valueOf(defaultName);
+        }
+    }
+
+    private static BarColor initBarColor(@NonNull String color) {
+        try {
+            return BarColor.valueOf(color.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Цвет боссбара '" + color + "' не найден");
+            return BarColor.RED;
+        }
+    }
+
+    private static BarStyle initBarStyle(@NonNull String style) {
+        try {
+            return BarStyle.valueOf(style.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Стиль боссбара '" + style + "' не найден");
+            return BarStyle.SOLID;
+        }
+    }
+
+    private static String initNotificationType(@NonNull String type) {
+        String upper = type.toUpperCase();
+        if (!"BOSSBAR".equals(upper) && !"ACTIONBAR".equals(upper)) {
+            plugin.getLogger().warning("Настройка '" + type + "' не поддерживается");
+            return "BOSSBAR";
+        }
+        return upper;
+    }
+
+    private static InventoryType parseInventoryType(@NonNull String name) {
+        try {
+            return InventoryType.valueOf(name);
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Инвентарь '" + name + "' не найден");
+            return null;
         }
     }
 }
