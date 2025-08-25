@@ -1,7 +1,6 @@
 package org.txtox8729.vshulkers.listeners;
 
 import com.earth2me.essentials.Essentials;
-import com.earth2me.essentials.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
@@ -48,11 +47,11 @@ public class SHListeners implements Listener {
     }
 
     private boolean isVanished(@NonNull Player player) {
-        return getEssentials().map(ess -> ess.getUser(player.getUniqueId())).map(User::isVanished).orElse(false);
+        return getEssentials().map(ess -> ess.getUser(player.getUniqueId())).map(user -> user != null && user.isVanished()).orElse(false);
     }
 
     private boolean isGodMode(@NonNull Player player) {
-        return getEssentials().map(ess -> ess.getUser(player.getUniqueId())).map(User::isGodModeEnabled).orElse(false);
+        return getEssentials().map(ess -> ess.getUser(player.getUniqueId())).map(user -> user != null && user.isGodModeEnabled()).orElse(false);
     }
 
     @EventHandler
@@ -80,6 +79,11 @@ public class SHListeners implements Listener {
 
         Inventory clickedInventory = event.getClickedInventory();
         if (clickedInventory == null) return;
+
+        if ((isShulkerOpen(player) || player.hasMetadata("shulkerOpening")) && isAttemptingToMoveShulker(event, player)) {
+            event.setCancelled(true);
+            return;
+        }
 
         if (isShulkerOpen(player) && clickedInventory.getType() == InventoryType.SHULKER_BOX) {
             scheduleUpdate(player, clickedInventory);
@@ -114,9 +118,19 @@ public class SHListeners implements Listener {
     public void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
+        if ((isShulkerOpen(player) || player.hasMetadata("shulkerOpening")) && dragContainsShulker(event)) {
+            event.setCancelled(true);
+            return;
+        }
+
         if (isShulkerOpen(player) && event.getInventory().getType() == InventoryType.SHULKER_BOX) {
             scheduleUpdate(player, event.getInventory());
         }
+    }
+
+    private boolean dragContainsShulker(@NonNull InventoryDragEvent event) {
+        return event.getNewItems().values().stream().anyMatch(ShulkerUtils::isShulkerBox)
+                || ShulkerUtils.isShulkerBox(event.getOldCursor());
     }
 
     private boolean tryAddToShulker(@NonNull Player player, @NonNull ItemStack item) {
@@ -143,6 +157,18 @@ public class SHListeners implements Listener {
     private void playPickupSound(@NonNull Player player) {
         if (ConfigUtil.pickupSoundEnabled && ConfigUtil.pickupSound != null) {
             player.playSound(player.getLocation(), ConfigUtil.pickupSound, SoundCategory.PLAYERS, ConfigUtil.pickupSoundVolume, ConfigUtil.pickupSoundPitch);
+        }
+    }
+
+    @EventHandler
+    public void onSwapHandItems(PlayerSwapHandItemsEvent event) {
+        Player player = event.getPlayer();
+        if (isShulkerOpen(player) || player.hasMetadata("shulkerOpening")) {
+            ItemStack main = event.getMainHandItem();
+            ItemStack off = event.getOffHandItem();
+            if (ShulkerUtils.isShulkerBox(main) || ShulkerUtils.isShulkerBox(off)) {
+                event.setCancelled(true);
+            }
         }
     }
 
@@ -278,5 +304,29 @@ public class SHListeners implements Listener {
             player.sendMessage(ConfigUtil.shulkerCommandDenied);
             event.setCancelled(true);
         }
+    }
+
+    private boolean isAttemptingToMoveShulker(@NonNull InventoryClickEvent event, @NonNull Player player) {
+        if (ShulkerUtils.isShulkerBox(event.getCursor()) || ShulkerUtils.isShulkerBox(event.getCurrentItem())) return true;
+        if (ShulkerUtils.isShulkerBox(player.getInventory().getItemInOffHand())) return true;
+
+        if (event.getAction() == InventoryAction.HOTBAR_SWAP || event.getClick() == ClickType.NUMBER_KEY) {
+            int hotbarButton = event.getHotbarButton();
+            if (hotbarButton >= 0 && hotbarButton < player.getInventory().getSize() && ShulkerUtils.isShulkerBox(player.getInventory().getItem(hotbarButton))) {
+                return true;
+            }
+        }
+
+        if (event.getAction() == InventoryAction.SWAP_WITH_CURSOR) {
+            if (ShulkerUtils.isShulkerBox(event.getCursor()) || ShulkerUtils.isShulkerBox(event.getCurrentItem())) return true;
+        }
+
+        if (event.getClick() == ClickType.SWAP_OFFHAND) {
+            return ShulkerUtils.isShulkerBox(player.getInventory().getItemInOffHand()) || ShulkerUtils.isShulkerBox(event.getCurrentItem());
+        }
+
+        if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && ShulkerUtils.isShulkerBox(event.getCurrentItem())) return true;
+
+        return false;
     }
 }
